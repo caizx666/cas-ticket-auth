@@ -45,11 +45,8 @@ local function query_and_validate_token(token, conf)
   ngx.log(ngx.DEBUG, "get token info from: ", conf.servicevalidate_url)
   local response_body = {}
   local res, code, response_headers = http.request{
-    url = conf.servicevalidate_url,
+    url = conf.servicevalidate_url .. '?service=' .. conf.service_name .. '&ticket=' .. token,
     method = "GET",
-    --headers = {
-    --  ["Authorization"] = "bearer " .. token
-    --},
     sink = ltn12.sink.table(response_body),
   }
 
@@ -67,14 +64,6 @@ local function query_and_validate_token(token, conf)
   if err then
     ngx.log(ngx.ERR, "failed to decode response body: ", err)
     return nil, err
-  end
-
-  if not decoded.expiresAt then
-    return nil, decoded.error or resp
-  end
-
-  if decoded.expiresAt <= os.time() then
-    return nil, EXPIRES_ERR
   end
 
   return decoded
@@ -116,10 +105,19 @@ function TokenAuthHandler:access(conf)
     return responses.send_HTTP_INTERNAL_SERVER_ERROR(err)
   end
 
-  if info.expiresAt < os.time() then
-    return responses.send(401, EXPIRES_ERR)
+  -- 没有expiresAt将不启用缓存，每次请求CAS Server验证
+  if not info.expiresAt then
+    cache.delete(KEY_PREFIX .. ":" .. token);
   end
-  ngx.log(ngx.DEBUG, "token will expire in ", info.expiresAt - os.time(), " seconds")
+
+  if info.expiresAt then
+    if info.expiresAt ~= 'never' then
+      if info.expiresAt < os.time() then
+        return responses.send(401, EXPIRES_ERR)
+      end
+      ngx.log(ngx.DEBUG, "token will expire in ", info.expiresAt - os.time(), " seconds")
+    end
+  end
 
   -- mapping to get_headers
   if conf.mapping then
