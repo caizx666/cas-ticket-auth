@@ -124,8 +124,8 @@ function TokenAuthHandler:access(conf)
   if info.attributes and conf.mapping then
     for k, v in pairs(utils.split(conf.mapping,',')) do
       local kv = utils.split(v,'=');
-      if info.attributes[kv[1]] then
-        ngx.req.set_header(kv[0], info.attributes[v]);
+      if info.attributes[kv[1] or kv[0]] then
+        ngx.req.set_header(kv[0], info.attributes[kv[1] or kv[0]]);
       end
     end
   end
