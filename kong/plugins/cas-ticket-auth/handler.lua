@@ -4,7 +4,7 @@ local cjson = require "cjson.safe"
 
 local BasePlugin = require "kong.plugins.base_plugin"
 local responses = require "kong.tools.responses"
-local cache = require "kong.tools.database_cache"
+local cache = require "kong.cache"
 
 local TokenAuthHandler = BasePlugin:extend()
 
@@ -95,7 +95,7 @@ function TokenAuthHandler:access(conf)
   end
 
   local info
-  info, err = cache.get_or_set(KEY_PREFIX .. ":" .. token, 3600, query_and_validate_token, token, conf)
+  info, err = cache:get(KEY_PREFIX .. ":" .. token, nil, query_and_validate_token, token, conf)
 
   if err then
     ngx.log(ngx.ERR, "failed to validate token: ", err)
@@ -107,7 +107,7 @@ function TokenAuthHandler:access(conf)
 
   -- 没有expiresAt将不启用缓存，每次请求CAS Server验证
   if not info.expiresAt then
-    cache.delete(KEY_PREFIX .. ":" .. token);
+    cache:invalidate(KEY_PREFIX .. ":" .. token);
   end
 
   if info.expiresAt then
