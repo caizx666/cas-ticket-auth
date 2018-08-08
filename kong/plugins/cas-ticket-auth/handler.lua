@@ -5,6 +5,7 @@ local cjson = require "cjson.safe"
 local BasePlugin = require "kong.plugins.base_plugin"
 local responses = require "kong.tools.responses"
 local cache = require "kong.cache"
+local utils = require "kong.tools.utils"
 
 local TokenAuthHandler = BasePlugin:extend()
 
@@ -120,10 +121,11 @@ function TokenAuthHandler:access(conf)
   end
 
   -- mapping to get_headers
-  if conf.mapping then
-    for k, v in pairs(conf.mapping) do
-      if info.attributes and info.attributes[v] then
-        ngx.req.set_header(k, info.attributes[v]);
+  if info.attributes and conf.mapping then
+    for k, v in pairs(utils.split(conf.mapping,',')) do
+      local kv = utils.split(v,'=');
+      if info.attributes[kv[1]] then
+        ngx.req.set_header(kv[0], info.attributes[v]);
       end
     end
   end

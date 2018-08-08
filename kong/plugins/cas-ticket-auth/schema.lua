@@ -1,8 +1,8 @@
 return {
   no_consumer = true,
   fields = {
-    service_name = {type = "string", required = true, default="https://api.saas-plat.com"},
+    service_name = {type = "string", required = true},
     servicevalidate_url = {type = "url", required = true},
-    mapping = {type = "table", required = false},
+    mapping = {type = "string", required = false},
   }
 }
